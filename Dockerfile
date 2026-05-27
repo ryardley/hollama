@@ -28,20 +28,22 @@ const config = {
 			fallback: 'index.html',   // SPA fallback for client-side routing
 			precompress: true,         // generate .br and .gz files
 			strict: false
-		})
+		}),
+		alias: {
+			'$i18n': './src/i18n'
+		}
 	}
 };
 
 export default config;
 SVELTECONFIG
 
-# SvelteKit adapter-static needs every route to opt into prerendering or
-# have a SPA fallback.  Set the layout default so all routes are covered.
+# Pure SPA mode: disable prerendering (dynamic routes like /sessions/[id]
+# can't be crawled) and disable SSR.  The fallback index.html handles everything.
 RUN mkdir -p src/routes && \
-    if ! grep -q 'prerender' src/routes/+layout.ts 2>/dev/null; then \
-      echo 'export const prerender = true;'  >> src/routes/+layout.ts; \
-      echo 'export const ssr = false;'       >> src/routes/+layout.ts; \
-    fi
+    sed -i '/export const prerender/d; /export const ssr/d' src/routes/+layout.ts 2>/dev/null || true && \
+    echo 'export const prerender = false;' >> src/routes/+layout.ts && \
+    echo 'export const ssr = false;'       >> src/routes/+layout.ts
 
 # Build the static site
 RUN npm run build
