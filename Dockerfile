@@ -1,43 +1,13 @@
-# Build stage
+
 FROM node:20-alpine AS builder
-
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-
-# Set build environment
-ENV PUBLIC_ADAPTER='docker-node'
-
-# Copy package files first (for better layer caching)
-COPY package*.json ./
-
-# Install all dependencies (including devDependencies needed for build)
-RUN npm ci
-
-# Copy everything else (.dockerignore handles exclusions)
+COPY package.json package-lock.json ./
+RUN pnpm import && pnpm install --frozen-lockfile
 COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine
-
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-WORKDIR /app
-
-# Set runtime environment
-ENV PUBLIC_ADAPTER='docker-node'
-ENV PORT=4173
-
-# Copy only the built application from builder stage
-COPY --from=builder --chown=appuser:appgroup /app/build ./build
-
-# Switch to non-root user
-USER appuser
-
-# Expose port (vite preview default)
-EXPOSE 4173
-
-# Run the built application directly (no dependencies needed!)
-CMD ["node", "build/index.js"]
+RUN pnpm run build
+ 
+FROM caddy:2-alpine
+COPY --from=builder /app/build /srv
+EXPOSE 80
+CMD ["caddy", "file-server", "--root", "/srv", "--listen", ":80"]
