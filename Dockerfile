@@ -10,4 +10,4 @@ RUN pnpm run build
 FROM caddy:2-alpine
 COPY --from=builder /app/build /srv
 EXPOSE 80
-CMD ["caddy", "file-server", "--root", "/srv", "--listen", ":80"]
+CMD ["caddy", "file-server", "--root", "/srv", "--listen", ":3120"]
